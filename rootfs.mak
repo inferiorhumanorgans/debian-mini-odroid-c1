@@ -24,11 +24,12 @@ delete-rootfs:
 build: $(IMAGE_FILE)
 
 $(ROOTFS_DIR).base:
-	if test -d "$@.tmp"; then rm -rf "$@.tmp" ; fi
+	if test -d "$@.tmp"; then sudo rm -rf "$@.tmp" ; fi
 	mkdir -p $@.tmp
-	debootstrap --foreign --no-check-gpg --include=ca-certificates,ssh,vim,locales,ntpdate,usbmount,initramfs-tools --arch=$(DIST_ARCH) $(DIST) $@.tmp $(DIST_URL)
-	cp `which qemu-arm-static` $@.tmp/usr/bin
-	chroot $@.tmp /bin/bash -c "/debootstrap/debootstrap --second-stage"
+	sudo debootstrap --foreign --no-check-gpg --include=ca-certificates,ssh,vim,locales,ntpdate,usbmount,initramfs-tools --arch=$(DIST_ARCH) $(DIST) $@.tmp $(DIST_URL)
+	sudo cp `which qemu-arm-static` $@.tmp/usr/bin
+	sudo chroot $@.tmp /bin/bash -c "/debootstrap/debootstrap --second-stage"
+	sudo chown -R `id -u` $@.tmp
 	rm $@.tmp/etc/hostname
 	rm $@.tmp/etc/ssh/ssh_host_*
 	ln -s /proc/mounts $@.tmp/etc/mtab
@@ -41,17 +42,18 @@ $(ROOTFS_DIR): $(ROOTFS_DIR).base
 	LINUX_VERSION="$(shell cat $(LINUX_SRC)/include/config/kernel.release)" && cd $@/lib/modules ; if [ ! -d "$$LINUX_VERSION" ] ; then ln -s "$$LINUX_VERSION*" "$$LINUX_VERSION" ; fi
 	cd files/common ; find . -type f ! -name '*~' -exec cp --preserve=mode,timestamps --parents \{\} ../../$@ \;
 	if [ -d files/$(DIST) ]; then cd files/$(DIST) ; mkdir -p ../../$@/$(DIST); find . -type f ! -name '*~' -exec cp --preserve=mode,timestamps --parents \{\} ../../$@ \; ; fi
-	mount -o bind /proc $@/proc
-	mount -o bind /sys $@/sys
-	mount -o bind /dev $@/dev
+	sudo mount -o bind /proc $@/proc
+	sudo mount -o bind /sys $@/sys
+	sudo mount -o bind /dev $@/dev
 	cp postinstall $@
 	if [ -d "postinst" ]; then cp -r postinst $@ ; fi
-	LINUX_VERSION="$(shell cat $(LINUX_SRC)/include/config/kernel.release)" && chroot $@ /bin/bash -c "/postinstall $(DIST) $(DIST_URL) $$LINUX_VERSION"
+	LINUX_VERSION="$(shell cat $(LINUX_SRC)/include/config/kernel.release)" && sudo chroot $@ /bin/bash -c "/postinstall $(DIST) $(DIST_URL) $$LINUX_VERSION"
+	find rootfs.base/ -xdev \! -type l | xargs -n 64 sudo chown -R `id -u`
 	for i in patches/*.patch ; do patch -p0 -d $@ < $$i ; done
 	if [ -d patches/$(DIST) ]; then for i in patches/$(DIST)/*.patch; do patch -p0 -d $@ < $$i ; done fi
-	umount $@/proc
-	umount $@/sys
-	umount $@/dev
+	sudo umount $@/proc
+	sudo umount $@/sys
+	sudo umount $@/dev
 	rm $@/postinstall
 	rm -rf $@/postinst/
 	rm $@/usr/bin/qemu-arm-static
@@ -61,8 +63,9 @@ $(RAMDISK_FILE): $(ROOTFS_DIR)
 	mkimage -A arm -O linux -T ramdisk -C none -a 0 -e 0 -n uInitrd -d $(ROOTFS_DIR)/boot/initrd.img-* uInitrd
 
 $(IMAGE_FILE): $(ROOTFS_DIR) $(RAMDISK_FILE)
-	if test -f "$@.tmp"; then rm "$@.tmp" ; fi
-	./createimg $@.tmp $(BOOT_MB) $(ROOT_MB) $(BOOT_DIR) $(ROOTFS_DIR) $(UBOOT_BIN_DIR) $(RAMDISK_FILE) "$(ROOT_DEV)"
+	if test -f "$@.tmp"; then rm -f "$@.tmp" ; fi
+	sudo ./createimg $@.tmp $(BOOT_MB) $(ROOT_MB) $(BOOT_DIR) $(ROOTFS_DIR) $(UBOOT_BIN_DIR) $(RAMDISK_FILE) "$(ROOT_DEV)"
+	sudo chown `id -u` $@.tmp
 	mv $@.tmp $@
 	touch $@
 
