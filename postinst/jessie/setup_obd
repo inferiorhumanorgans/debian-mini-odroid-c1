@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+apt-get install -y screen git sudo
+apt-get install -y qtbase5-dev
+
+adduser obd --disabled-password --ingroup sudo --gecos ''
+echo 'obd:obd' | chpasswd
+
