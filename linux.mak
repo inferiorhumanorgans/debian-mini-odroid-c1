@@ -11,7 +11,7 @@ all: build
 
 .PHONY: clean
 clean:
-	if test -d "$(LINUX_SRC)"; then $(MAKE) -C $(LINUX_SRC) clean ; fi
+	if test -d "$(LINUX_SRC)"; then $(MAKE) -j3 -C $(LINUX_SRC) clean ; fi
 	rm -rf $(wildcard $(BOOT_DIR) $(BOOT_DIR).tmp $(MODS_DIR) $(MODS_DIR).tmp)
 
 .PHONY: distclean
@@ -39,17 +39,17 @@ $(BOOT_DIR): $(UIMAGE_BIN) $(MESON8B_ODROIDC_DTB_BIN)
 	touch $@
 
 $(UIMAGE_BIN): $(LINUX_TC_DIR) $(LINUX_SRC)
-	$(MAKE) -C $(LINUX_SRC) odroidc_defconfig
-	$(MAKE) -C $(LINUX_SRC) uImage
-	$(MAKE) -C $(LINUX_SRC) dtbs
+	$(MAKE) -j3 -C $(LINUX_SRC) odroidc_defconfig
+	$(MAKE) -j3 -C $(LINUX_SRC) uImage
+	$(MAKE) -j3 -C $(LINUX_SRC) dtbs
 	touch $@
 
 $(MODS_DIR): $(UIMAGE_BIN)
 	if test -d "$@.tmp"; then rm -rf "$@.tmp" ; fi
 	if test -d "$@"; then rm -rf "$@" ; fi
 	mkdir -p "$@.tmp"
-	$(MAKE) -C $(LINUX_SRC) modules
-	$(MAKE) -C $(LINUX_SRC) INSTALL_MOD_PATH=$(abspath $(MODS_DIR).tmp) modules_install
+	$(MAKE) -j3 -C $(LINUX_SRC) modules
+	$(MAKE) -j3 -C $(LINUX_SRC) INSTALL_MOD_PATH=$(abspath $(MODS_DIR).tmp) modules_install
 	mv "$@.tmp" $@
 	touch $@
 
